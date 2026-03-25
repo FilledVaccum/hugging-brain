@@ -110,8 +110,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ article });
   } catch (error) {
     console.error("Process content error:", error);
+    const message = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: "Processing failed. Check AI provider configuration." },
+      { error: `Processing failed: ${message}` },
       { status: 500 }
     );
   }

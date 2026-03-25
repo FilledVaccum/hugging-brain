@@ -34,7 +34,7 @@ async function getAISettings(): Promise<{
       settings.bedrock_model_id ||
       process.env.BEDROCK_MODEL_ID ||
       "anthropic.claude-haiku-4-5-20251001-v1:0",
-    bedrockRegion: settings.bedrock_region || process.env.AWS_REGION || "us-east-1",
+    bedrockRegion: settings.bedrock_region || process.env.AWS_REGION || "us-west-2",
     anthropicModelId:
       settings.anthropic_model_id || "claude-haiku-4-5-20251001",
   };
