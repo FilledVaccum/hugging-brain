@@ -1,7 +1,3 @@
-import {
-  BedrockRuntimeClient,
-  InvokeModelCommand,
-} from "@aws-sdk/client-bedrock-runtime";
 import Anthropic from "@anthropic-ai/sdk";
 import { supabaseAdmin } from "./supabase";
 
@@ -44,42 +40,66 @@ async function getAISettings(): Promise<{
   };
 }
 
+/**
+ * Call Bedrock using short-term API key (Bearer token) via direct REST API.
+ * Uses the Converse API: POST /model/{modelId}/converse
+ * Auth: Authorization: Bearer {BEDROCK_API_KEY}
+ * Docs: https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys.html
+ */
 async function callBedrock(
   prompt: string,
   system: string,
   modelId: string,
   region: string
 ): Promise<AIResponse> {
-  const client = new BedrockRuntimeClient({
-    region,
-    ...(process.env.AWS_ACCESS_KEY_ID && {
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
-        ...(process.env.AWS_SESSION_TOKEN && {
-          sessionToken: process.env.AWS_SESSION_TOKEN,
-        }),
+  const apiKey = process.env.BEDROCK_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "BEDROCK_API_KEY environment variable is not set. " +
+      "Generate a short-term or long-term API key from the Amazon Bedrock console."
+    );
+  }
+
+  const url = `https://bedrock-runtime.${region}.amazonaws.com/model/${modelId}/converse`;
+
+  const body = {
+    messages: [
+      {
+        role: "user",
+        content: [{ text: prompt }],
       },
-    }),
+    ],
+    system: [{ text: system }],
+    inferenceConfig: {
+      maxTokens: 8192,
+    },
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(body),
   });
 
-  const body = JSON.stringify({
-    anthropic_version: "bedrock-2023-05-31",
-    max_tokens: 8192,
-    system,
-    messages: [{ role: "user", content: prompt }],
-  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Bedrock API error (${response.status}): ${errorText}`
+    );
+  }
 
-  const command = new InvokeModelCommand({
-    modelId,
-    contentType: "application/json",
-    accept: "application/json",
-    body: new TextEncoder().encode(body),
-  });
+  const result = await response.json();
 
-  const response = await client.send(command);
-  const result = JSON.parse(new TextDecoder().decode(response.body));
-  return { text: result.content[0].text };
+  // Converse API response format:
+  // { output: { message: { role: "assistant", content: [{ text: "..." }] } } }
+  const text =
+    result.output?.message?.content?.[0]?.text || "";
+
+  return { text };
 }
 
 async function callAnthropic(
