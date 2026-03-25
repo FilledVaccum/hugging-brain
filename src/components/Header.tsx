@@ -6,9 +6,9 @@ import Link from "next/link";
 
 const navLinks = [
   { href: "/blog", label: "Blog" },
+  { href: "/first-principles", label: "First Principles" },
   { href: "/cheatsheets", label: "Cheat Sheets" },
   { href: "#newsletter", label: "Newsletter" },
-  { href: "#about", label: "About" },
   { href: "/rss.xml", label: "RSS" },
 ];
 
