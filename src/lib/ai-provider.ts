@@ -1,3 +1,4 @@
+import { getTokenProvider } from "@aws/bedrock-token-generator";
 import Anthropic from "@anthropic-ai/sdk";
 import { supabaseAdmin } from "./supabase";
 
@@ -33,7 +34,7 @@ async function getAISettings(): Promise<{
     bedrockModelId:
       settings.bedrock_model_id ||
       process.env.BEDROCK_MODEL_ID ||
-      "anthropic.claude-haiku-4-5-20251001-v1:0",
+      "us.anthropic.claude-haiku-4-5-20251001-v1:0",
     bedrockRegion: settings.bedrock_region || process.env.AWS_REGION || "us-west-2",
     anthropicModelId:
       settings.anthropic_model_id || "claude-haiku-4-5-20251001",
@@ -41,9 +42,9 @@ async function getAISettings(): Promise<{
 }
 
 /**
- * Call Bedrock using short-term API key (Bearer token) via direct REST API.
- * Uses the Converse API: POST /model/{modelId}/converse
- * Auth: Authorization: Bearer {BEDROCK_API_KEY}
+ * Call Bedrock using short-term API key via the Converse API.
+ * Uses @aws/bedrock-token-generator to process the API key from
+ * AWS_BEARER_TOKEN_BEDROCK env var into a valid bearer token.
  * Docs: https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys.html
  */
 async function callBedrock(
@@ -52,14 +53,10 @@ async function callBedrock(
   modelId: string,
   region: string
 ): Promise<AIResponse> {
-  const apiKey = process.env.BEDROCK_API_KEY;
-
-  if (!apiKey) {
-    throw new Error(
-      "BEDROCK_API_KEY environment variable is not set. " +
-      "Generate a short-term or long-term API key from the Amazon Bedrock console."
-    );
-  }
+  // Get bearer token from the token generator
+  // It reads from AWS_BEARER_TOKEN_BEDROCK env var
+  const provideToken = getTokenProvider();
+  const token = await provideToken();
 
   const url = `https://bedrock-runtime.${region}.amazonaws.com/model/${modelId}/converse`;
 
@@ -80,7 +77,7 @@ async function callBedrock(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(body),
   });
@@ -96,8 +93,7 @@ async function callBedrock(
 
   // Converse API response format:
   // { output: { message: { role: "assistant", content: [{ text: "..." }] } } }
-  const text =
-    result.output?.message?.content?.[0]?.text || "";
+  const text = result.output?.message?.content?.[0]?.text || "";
 
   return { text };
 }
