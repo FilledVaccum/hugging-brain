@@ -5,10 +5,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 
 const navLinks = [
-  { href: "#news", label: "News Feed" },
-  { href: "#categories", label: "Categories" },
+  { href: "/blog", label: "Blog" },
+  { href: "/cheatsheets", label: "Cheat Sheets" },
   { href: "#newsletter", label: "Newsletter" },
   { href: "#about", label: "About" },
+  { href: "/rss.xml", label: "RSS" },
 ];
 
 export default function Header() {

@@ -6,12 +6,35 @@ import { motion } from "framer-motion";
 export default function Newsletter() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (email) {
-      setSubmitted(true);
-      setEmail("");
+    if (!email) return;
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setSubmitted(true);
+        setEmail("");
+      } else {
+        setError(data.error || "Something went wrong");
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -92,11 +115,15 @@ export default function Newsletter() {
                 />
                 <button
                   type="submit"
-                  className="px-8 py-4 bg-olive-500 text-warm-50 rounded-full font-body text-sm tracking-wide hover:bg-olive-400 transition-all duration-300 hover:shadow-lg hover:shadow-olive-500/20 whitespace-nowrap"
+                  disabled={loading}
+                  className="px-8 py-4 bg-olive-500 text-warm-50 rounded-full font-body text-sm tracking-wide hover:bg-olive-400 transition-all duration-300 hover:shadow-lg hover:shadow-olive-500/20 whitespace-nowrap disabled:opacity-50"
                 >
-                  Subscribe free
+                  {loading ? "Subscribing..." : "Subscribe free"}
                 </button>
               </form>
+            )}
+            {error && (
+              <p className="mt-4 text-sm text-red-400 font-body">{error}</p>
             )}
 
             <p className="mt-6 text-xs text-stone-500 font-body">
